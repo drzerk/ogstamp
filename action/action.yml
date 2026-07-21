@@ -24,7 +24,10 @@ inputs:
     required: false
     default: 'true'
   github-token:
-    description: 'Token used to write the PR comment. Usually ${{ secrets.GITHUB_TOKEN }}.'
+    description: >
+      Token used to write the PR comment. Pass the workflow's GITHUB_TOKEN
+      secret. Action metadata is expression-evaluated, so it cannot be spelled
+      out here.
     required: false
     default: ''
   api-key:
