@@ -12,8 +12,29 @@ database_id = "bfad2555-2cc2-4fff-9ec1-da7aad5d92b5"
 binding = "OG_CACHE"
 bucket_name = "ogstamp-og-cache"
 
+# NOTE: a per-invocation CPU brake would go here as `[limits] cpu_ms = 2000`,
+# sized against measured CPU (workersInvocationsAdaptive, n=106: P50 3.7ms /
+# P90 148.9ms / P99.9 242.7ms — bimodal, low band = R2 cache hit, high band =
+# Satori render). It is NOT set because the API rejects it on the Free plan:
+# "CPU limits are not supported for the Free plan" [code: 100328]. This is the
+# error that kept the whole Cycle-11 guardrail set from ever deploying.
+# We therefore run on the 30s platform default. The brakes that actually bound
+# spend are in code and unaffected: GLOBAL_DAILY_RENDER_CAP, the per-user key
+# cap, and the IP limiter below. Re-add on the first paid plan.
+# See docs/devops/2026-07-21-cycle11-cost-guardrails.md.
+
+# Native IP rate limit on POST /register — no KV, no D1 writes, no extra cost.
+# `period` must be 10 or 60 (seconds); `namespace_id` is any stable per-Worker id.
+[[ratelimits]]
+name = "REGISTER_LIMITER"
+namespace_id = "1001"
+
+  [ratelimits.simple]
+  limit = 3
+  period = 60
+
 [vars]
-ENVIRONMENT = "development"
+ENVIRONMENT = "production"
 # Set AUTH_SECRET via `wrangler secret put AUTH_SECRET` for dashboard cookie signing
 #
 # Billing (Lemon Squeezy) — Phase 2 human step, see docs/cfo/2026-07-21-billing-decision.md:
@@ -21,12 +42,11 @@ ENVIRONMENT = "development"
 #   2. Add here: LS_CHECKOUT_URL_PRO / LS_CHECKOUT_URL_BUSINESS (hosted checkout URLs)
 # Until these exist, upgrade buttons stay hidden and POST /webhooks/lemonsqueezy returns 503.
 
-[env.staging]
-name = "ogstamp-staging"
-[env.staging.vars]
-ENVIRONMENT = "staging"
-
-[env.production]
-name = "ogstamp"
-[env.production.vars]
-ENVIRONMENT = "production"
+# NO [env.*] blocks. There used to be a `[env.production]` here with the same
+# `name = "ogstamp"` as the top level, which made it a live outage waiting to
+# happen: wrangler does NOT inherit d1_databases, r2_buckets or ratelimits into
+# a named environment, so `wrangler deploy --env production` would have
+# overwritten the production Worker with one that has no database and no bucket.
+# Every deploy so far happened to use the top-level config, which is why it
+# never fired. Deploy command is plain `wrangler deploy` (or `--env=""`).
+# Re-adding an environment means duplicating every binding block into it.

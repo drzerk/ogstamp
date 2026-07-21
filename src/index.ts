@@ -11,7 +11,12 @@ import {
   errorPage,
 } from './dashboard/pages';
 import type { ApiKey, CheckoutUrls, Env, OGParams, Tier } from './types';
-import { TIER_LIMITS } from './types';
+import {
+  GLOBAL_DAILY_RENDER_CAP,
+  GLOBAL_DAILY_SIGNUP_CAP,
+  MAX_KEYS_PER_USER,
+  TIER_LIMITS,
+} from './types';
 import {
   applyLSEvent,
   verifyLSSignature,
@@ -78,12 +83,56 @@ async function maybeResetUsage(db: D1Database, key: ApiKey): Promise<ApiKey> {
   return key;
 }
 
-// Increment usage counter and record event
+// ── Global daily counters ─────────────────────────────────────────────────────
+// One row per UTC day, three columns. These back the denial-of-wallet brakes and
+// keep the fetch:render ratio measurable now that hits no longer write events.
+
+type CounterColumn = 'renders' | 'hits' | 'signups';
+
+function utcDay(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+// Seconds until the counters roll over at 00:00 UTC — used for Retry-After.
+function secondsUntilUtcMidnight(): number {
+  const now = new Date();
+  const midnight = Date.UTC(
+    now.getUTCFullYear(),
+    now.getUTCMonth(),
+    now.getUTCDate() + 1
+  );
+  return Math.max(1, Math.ceil((midnight - now.getTime()) / 1000));
+}
+
+// One statement, upsert. Cheap enough to run on the cache-hit path.
+// Column name comes from a closed union, never from user input.
+function bumpDailyCounter(db: D1Database, column: CounterColumn) {
+  return db
+    .prepare(
+      `INSERT INTO daily_counters (day, ${column}) VALUES (?, 1)
+       ON CONFLICT(day) DO UPDATE SET ${column} = ${column} + 1`
+    )
+    .bind(utcDay());
+}
+
+async function readDailyCounter(
+  db: D1Database,
+  column: CounterColumn
+): Promise<number> {
+  const row = await db
+    .prepare(`SELECT ${column} AS n FROM daily_counters WHERE day = ?`)
+    .bind(utcDay())
+    .first<{ n: number }>();
+  return row?.n ?? 0;
+}
+
+// Record a render: bump the key's monthly usage, log the event, bump the global
+// render counter. Renders only — a cache hit is the cheapest operation in the
+// system and no longer pays for three D1 row writes, nor counts against quota.
 async function recordUsage(
   db: D1Database,
   key: ApiKey,
-  template: string,
-  cacheHit: boolean
+  template: string
 ): Promise<void> {
   const eventId = crypto.randomUUID();
   await db.batch([
@@ -92,9 +141,10 @@ async function recordUsage(
       .bind(key.id),
     db
       .prepare(
-        'INSERT INTO usage_events (id, api_key_id, template, cache_hit) VALUES (?, ?, ?, ?)'
+        'INSERT INTO usage_events (id, api_key_id, template, cache_hit) VALUES (?, ?, ?, 0)'
       )
-      .bind(eventId, key.id, template, cacheHit ? 1 : 0),
+      .bind(eventId, key.id, template),
+    bumpDailyCounter(db, 'renders'),
   ]);
 }
 
@@ -136,11 +186,12 @@ app.get('/og', async c => {
   // Reset usage if month rolled
   apiKey = await maybeResetUsage(c.env.DB, apiKey);
 
-  // Check rate limit
+  // Check rate limit. The quota meters renders (cache misses), not deliveries —
+  // a cached image is free to serve, so it is free to fetch.
   if (apiKey.usage_count >= apiKey.monthly_limit) {
     return c.json(
       {
-        error: 'Monthly image limit reached',
+        error: 'Monthly render limit reached',
         tier: apiKey.tier,
         limit: apiKey.monthly_limit,
         upgrade_url: '/register?tier=pro',
@@ -161,15 +212,21 @@ app.get('/og', async c => {
       : 'default') as OGParams['template'],
   };
 
-  const watermark = apiKey.tier === 'free';
+  // No watermark on any authenticated key, free included. A watermark on a
+  // production-visible asset is a disqualification, not a trial restriction —
+  // nobody ships someone else's logo on their own share cards. /demo/og keeps
+  // its watermark; that is the one viral surface and it stays as it is.
+  const watermark = false;
   const cacheKey = await buildCacheKey(params, watermark);
   const r2Key = `og/${cacheKey}.png`;
 
   // ── R2 cache lookup ──
   const cached = await c.env.OG_CACHE.get(r2Key);
   if (cached) {
-    // Cache hit — return stored PNG, still track usage (counts toward limit)
-    await recordUsage(c.env.DB, apiKey, params.template ?? 'default', true);
+    // Cache hit — serve the stored PNG. No usage_count bump, no usage_event:
+    // this path costs one R2 read and must stay that cheap. A single aggregate
+    // counter write keeps the fetch:render ratio observable for unit economics.
+    c.executionCtx.waitUntil(bumpDailyCounter(c.env.DB, 'hits').run());
     const imageData = await cached.arrayBuffer();
     return new Response(imageData, {
       headers: {
@@ -179,6 +236,25 @@ app.get('/og', async c => {
         'X-OGStamp-Tier': apiKey.tier,
       },
     });
+  }
+
+  // ── Global daily render cap ──
+  // Denial-of-wallet killswitch, read only here so the hit path stays lean.
+  // Free tier only: a paying customer must never be blocked by free-tier abuse.
+  if (apiKey.tier === 'free') {
+    const rendersToday = await readDailyCounter(c.env.DB, 'renders');
+    if (rendersToday >= GLOBAL_DAILY_RENDER_CAP) {
+      return c.json(
+        {
+          error:
+            'Free-tier render capacity for today is exhausted. Cached images still serve normally; new renders resume at 00:00 UTC.',
+          daily_cap: GLOBAL_DAILY_RENDER_CAP,
+          upgrade_url: '/register?tier=pro',
+        },
+        503,
+        { 'Retry-After': String(secondsUntilUtcMidnight()) }
+      );
+    }
   }
 
   // ── Generate image ──
@@ -193,9 +269,9 @@ app.get('/og', async c => {
     })
   );
 
-  // Record usage (also fire-and-forget after we have the image)
+  // Record the render (also fire-and-forget after we have the image)
   c.executionCtx.waitUntil(
-    recordUsage(c.env.DB, apiKey, params.template ?? 'default', false)
+    recordUsage(c.env.DB, apiKey, params.template ?? 'default')
   );
 
   return new Response(imageBuffer, {
@@ -271,6 +347,31 @@ app.get('/register', c => {
 });
 
 app.post('/register', async c => {
+  // IP rate limit first — cheapest possible rejection, touches no storage.
+  // The binding is optional by design: `wrangler dev` without it must still
+  // boot, so a missing limiter degrades to "no IP limit", never to a crash.
+  //
+  // ⚠️ MEASURED NON-ENFORCING IN PRODUCTION (Cycle 12). The binding is declared
+  // correctly and wrangler reports it at deploy ("3 requests/60s"), but 10
+  // sequential POSTs from one IP inside ~2 minutes were all admitted; every 429
+  // observed came from the per-user key cap below, not from here. Cause not
+  // established — plausibly Free-plan gating, as with `[limits] cpu_ms`.
+  // Kept because it costs nothing and is correct if the platform starts
+  // enforcing, but it must NOT be counted as a guard. What actually bounds
+  // spend is GLOBAL_DAILY_RENDER_CAP (verified: 503 + Retry-After) plus the
+  // key cap (verified) and the signup cap. Re-test before relying on this.
+  const limiter = c.env.REGISTER_LIMITER;
+  if (limiter) {
+    const ip = c.req.header('CF-Connecting-IP') ?? 'unknown';
+    const { success } = await limiter.limit({ key: ip });
+    if (!success) {
+      return htmlResponse(
+        registerPage('Too many signup attempts from this address. Wait a minute and try again.'),
+        429
+      );
+    }
+  }
+
   let email: string, keyname: string, tier: string;
   try {
     const form = await c.req.formData();
@@ -283,6 +384,15 @@ app.post('/register', async c => {
 
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return htmlResponse(registerPage('Please enter a valid email address', tier), 400);
+  }
+
+  // Global daily signup cap — the same denial-of-wallet brake as renders.
+  const signupsToday = await readDailyCounter(c.env.DB, 'signups');
+  if (signupsToday >= GLOBAL_DAILY_SIGNUP_CAP) {
+    return htmlResponse(
+      registerPage('New signups are paused for today. Please try again after 00:00 UTC.', tier),
+      503
+    );
   }
 
   // Paid tiers have no payment flow yet — every self-serve key starts on free.
@@ -306,6 +416,24 @@ app.post('/register', async c => {
     return htmlResponse(registerPage('Database error — please try again'), 500);
   }
 
+  // Cap keys per user. `users` already dedupes on email, but api_keys was
+  // unbounded — one address could mint unlimited keys, each with a full quota,
+  // which made the monthly limit per key instead of per human. This closes it.
+  const keyCount = await c.env.DB
+    .prepare('SELECT COUNT(*) as cnt FROM api_keys WHERE user_id = ?')
+    .bind(user.id)
+    .first<{ cnt: number }>();
+  if ((keyCount?.cnt ?? 0) >= MAX_KEYS_PER_USER) {
+    return htmlResponse(
+      registerPage(
+        `This email already has ${MAX_KEYS_PER_USER} API keys, which is the maximum. ` +
+          `View or reuse them from your <a href="/dashboard">dashboard</a>.`,
+        tier
+      ),
+      429
+    );
+  }
+
   // Generate API key
   const rawKey = generateRawKey();
   const keyHash = await sha256(rawKey);
@@ -322,6 +450,10 @@ app.post('/register', async c => {
     )
     .bind(keyId, user.id, keyname, keyPrefix, keyHash, safeTier, monthlyLimit, resetAt)
     .run();
+
+  // Awaited, not fire-and-forget: signups are rare and the counter is a guard,
+  // so an accurate count matters more than the few ms it costs.
+  await bumpDailyCounter(c.env.DB, 'signups').run();
 
   return htmlResponse(keyCreatedPage(rawKey, email, safeTier, new URL(c.req.url).host));
 });

@@ -610,7 +610,7 @@ export function landingPage(host: string, checkout: CheckoutUrls = {}): string {
         </div>
         <p class="pg-cta">
           <span class="pg-wm">↑ live preview carries a watermark.</span>
-          <a href="/register">Get a free key</a> to drop it — 100 images/month, no card.
+          <a href="/register">Get a free key</a> to drop it — 1,000 renders/month, no card.
         </p>
       </div>
     </div>
@@ -656,7 +656,7 @@ export function landingPage(host: string, checkout: CheckoutUrls = {}): string {
         </thead>
         <tbody>
           <tr><td>title</td><td>string</td><td><span class="required">required</span></td><td>Page title — the main headline (max 120 chars)</td></tr>
-          <tr><td>key</td><td>string</td><td><span class="required">required</span></td><td>Your API key (free tier = 100 images/month)</td></tr>
+          <tr><td>key</td><td>string</td><td><span class="required">required</span></td><td>Your API key (free tier = 1,000 renders/month)</td></tr>
           <tr><td>description</td><td>string</td><td><span class="optional">optional</span></td><td>Subtitle or page excerpt (max 200 chars)</td></tr>
           <tr><td>domain</td><td>string</td><td><span class="optional">optional</span></td><td>Your domain shown as source label</td></tr>
           <tr><td>author</td><td>string</td><td><span class="optional">optional</span></td><td>Author name shown in footer</td></tr>
@@ -704,12 +704,12 @@ export function landingPage(host: string, checkout: CheckoutUrls = {}): string {
         <div class="feature-card">
           <span class="feature-icon">🔑</span>
           <h3>Instant API key</h3>
-          <p>Sign up with email, get a key immediately. 100 images free, no credit card required.</p>
+          <p>Sign up with email, get a key immediately. 1,000 renders free, no credit card required.</p>
         </div>
         <div class="feature-card">
           <span class="feature-icon">📊</span>
           <h3>Usage dashboard</h3>
-          <p>Track how many images you've generated, reset date, and tier status in a clean developer dashboard.</p>
+          <p>Track how many renders you've used, reset date, and tier status in a clean developer dashboard.</p>
         </div>
       </div>
     </div>
@@ -726,12 +726,12 @@ export function landingPage(host: string, checkout: CheckoutUrls = {}): string {
           <p class="pricing-tier">Free</p>
           <p class="pricing-price">$0</p>
           <p class="pricing-period">forever</p>
-          <p class="pricing-limit">100 images / month</p>
+          <p class="pricing-limit">1,000 renders / month</p>
           <ul class="pricing-features">
             <li>3 templates (dark + light)</li>
             <li>R2 global cache</li>
             <li>API key + dashboard</li>
-            <li class="dim">OGStamp watermark</li>
+            <li>No watermark</li>
             <li class="dim">No custom fonts</li>
           </ul>
           <div class="pricing-cta">
@@ -743,10 +743,9 @@ export function landingPage(host: string, checkout: CheckoutUrls = {}): string {
           <p class="pricing-tier pricing-tier-featured">⚡ Pro — most popular</p>
           <p class="pricing-price" style="color:var(--accent);">$19</p>
           <p class="pricing-period">per month</p>
-          <p class="pricing-limit" style="color:var(--accent);">10,000 images / month</p>
+          <p class="pricing-limit" style="color:var(--accent);">10,000 renders / month</p>
           <ul class="pricing-features">
             <li>Everything in Free</li>
-            <li>No watermark</li>
             <li>Custom font upload</li>
             <li>Usage analytics</li>
             <li>Priority support</li>
@@ -764,7 +763,7 @@ export function landingPage(host: string, checkout: CheckoutUrls = {}): string {
           <p class="pricing-tier">Business</p>
           <p class="pricing-price">$49</p>
           <p class="pricing-period">per month</p>
-          <p class="pricing-limit">100,000 images / month</p>
+          <p class="pricing-limit">100,000 renders / month</p>
           <ul class="pricing-features">
             <li>Everything in Pro</li>
             <li>Custom domain (CNAME)</li>
@@ -908,7 +907,7 @@ export function registerPage(error?: string, tier?: string, billingLive = false)
         tier && tier !== 'free'
           ? billingLive
             ? `<div class="card" style="margin-bottom:16px;padding:14px 16px;font-size:13px;color:var(--text-2);">⚡ Every new key starts on the <strong>Free</strong> tier — upgrade to Pro from your dashboard right after signup.</div>`
-            : `<div class="card" style="margin-bottom:16px;padding:14px 16px;font-size:13px;color:var(--text-2);">⚡ Pro &amp; Business checkout launches soon — every new key currently starts on the <strong>Free</strong> tier (100 images/month).</div>`
+            : `<div class="card" style="margin-bottom:16px;padding:14px 16px;font-size:13px;color:var(--text-2);">⚡ Pro &amp; Business checkout launches soon — every new key currently starts on the <strong>Free</strong> tier (1,000 renders/month).</div>`
           : ''
       }
 
@@ -940,8 +939,8 @@ export function registerPage(error?: string, tier?: string, billingLive = false)
 
   return layout('Get API Key', body, {
     path: '/register',
-    description: 'Create a free OGStamp API key — 100 images a month, no credit card.',
-    card: { title: 'Get a free OGStamp API key', description: '100 images a month, no credit card' },
+    description: 'Create a free OGStamp API key — 1,000 renders a month, no credit card.',
+    card: { title: 'Get a free OGStamp API key', description: '1,000 renders a month, no credit card' },
   });
 }
 
@@ -968,7 +967,7 @@ export function keyCreatedPage(rawKey: string, email: string, tier: string, host
           <button class="btn btn-primary" data-copy="${rawKey}" style="white-space:nowrap;">Copy</button>
         </div>
         <p style="font-size:12px;color:var(--text-3);margin-top:12px;font-family:var(--font-mono);">
-          Free tier: 100 images/month · Resets monthly · ${tier === 'pro' ? '10,000 images' : 'upgrade anytime'}
+          Free tier: 1,000 renders/month · Resets monthly · ${tier === 'pro' ? '10,000 renders' : 'upgrade anytime'}
         </p>
       </div>
 
@@ -1035,7 +1034,7 @@ export function dashboardPage(
         <div class="card">
           <p class="card-title">Usage This Month</p>
           <div class="usage-count">${key.usage_count.toLocaleString()}</div>
-          <p class="usage-limit">of ${key.monthly_limit.toLocaleString()} images</p>
+          <p class="usage-limit">of ${key.monthly_limit.toLocaleString()} renders</p>
           <div class="usage-bar-wrap">
             <div class="usage-bar ${barClass}" style="width:${Math.min(pct, 100)}%"></div>
           </div>

@@ -94,7 +94,7 @@ account, no signup — plus the tags to paste:
 ```
 
 That URL is [OGStamp](https://ogstamp.drzerk88.workers.dev), which renders a
-1200×630 card per request at the edge. The free tier covers 100 images a month.
+1200×630 card per request at the edge. The free tier covers 1,000 renders a month.
 `og-check` itself works fine without it — set `fail-on` and ignore the snippet.
 
 ## Notes
