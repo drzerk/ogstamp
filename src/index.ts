@@ -10,8 +10,13 @@ import {
   dashboardPage,
   errorPage,
 } from './dashboard/pages';
-import type { ApiKey, Env, OGParams, Tier } from './types';
+import type { ApiKey, CheckoutUrls, Env, OGParams, Tier } from './types';
 import { TIER_LIMITS } from './types';
+import {
+  applyLSEvent,
+  verifyLSSignature,
+  type LSWebhookPayload,
+} from './billing/lemonsqueezy';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -93,12 +98,19 @@ async function recordUsage(
   ]);
 }
 
+function checkoutUrls(env: Env): CheckoutUrls {
+  return {
+    pro: env.LS_CHECKOUT_URL_PRO,
+    business: env.LS_CHECKOUT_URL_BUSINESS,
+  };
+}
+
 // ─── Routes ───────────────────────────────────────────────────────────────────
 
 // Landing page
 app.get('/', c => {
   const host = new URL(c.req.url).host;
-  return htmlResponse(landingPage(host));
+  return htmlResponse(landingPage(host, checkoutUrls(c.env)));
 });
 
 // ── OG image generation ────────────────────────────────────────────────────────
@@ -196,10 +208,66 @@ app.get('/og', async c => {
   });
 });
 
+// ── Public demo render (keyless, always watermarked) ─────────────────────────
+// Powers the landing-page hero + interactive playground so a visitor can try
+// OGStamp before signing up. Always watermarked, input-capped, R2-cached, and
+// writes NOTHING to D1 — so it can never be abused as a free unwatermarked API.
+// Missing/blank title falls back to a placeholder so the preview never 4xx's.
+app.get('/demo/og', async c => {
+  const q = c.req.query();
+
+  const params: OGParams = {
+    title: ((q['title'] ?? '').trim() || 'Your Page Title Here').slice(0, 100),
+    description: (q['description'] ?? '').trim().slice(0, 200) || undefined,
+    domain: (q['domain'] ?? '').trim().slice(0, 100) || undefined,
+    tag: (q['tag'] ?? '').trim().slice(0, 40) || undefined,
+    theme: (q['theme'] === 'light' ? 'light' : 'dark') as 'dark' | 'light',
+    template: (['blog', 'article'].includes(q['template'] ?? '')
+      ? q['template']
+      : 'default') as OGParams['template'],
+  };
+
+  // Demo images are always watermarked; cache under a dedicated prefix.
+  const cacheKey = await buildCacheKey(params, true);
+  const r2Key = `demo/${cacheKey}.png`;
+
+  const cached = await c.env.OG_CACHE.get(r2Key);
+  if (cached) {
+    const imageData = await cached.arrayBuffer();
+    return new Response(imageData, {
+      headers: {
+        'Content-Type': 'image/png',
+        'Cache-Control': 'public, max-age=86400, s-maxage=604800',
+        'X-Cache': 'HIT',
+        'X-OGStamp-Demo': '1',
+      },
+    });
+  }
+
+  const imageResponse = await generateOGImage(params, true);
+  const imageBuffer = await imageResponse.arrayBuffer();
+
+  c.executionCtx.waitUntil(
+    c.env.OG_CACHE.put(r2Key, imageBuffer.slice(0), {
+      httpMetadata: { contentType: 'image/png' },
+      customMetadata: { demo: '1', template: params.template ?? 'default' },
+    })
+  );
+
+  return new Response(imageBuffer, {
+    headers: {
+      'Content-Type': 'image/png',
+      'Cache-Control': 'public, max-age=86400, s-maxage=604800',
+      'X-Cache': 'MISS',
+      'X-OGStamp-Demo': '1',
+    },
+  });
+});
+
 // ── Registration ──────────────────────────────────────────────────────────────
 app.get('/register', c => {
   const tier = c.req.query('tier');
-  return htmlResponse(registerPage(undefined, tier));
+  return htmlResponse(registerPage(undefined, tier, !!c.env.LS_CHECKOUT_URL_PRO));
 });
 
 app.post('/register', async c => {
@@ -281,7 +349,49 @@ app.get('/dashboard', async c => {
     .bind(refreshed.id, yesterday)
     .first<{ cnt: number }>();
 
-  return htmlResponse(dashboardPage(refreshed, recent?.cnt ?? 0, new URL(c.req.url).host));
+  const owner = await c.env.DB
+    .prepare('SELECT email FROM users WHERE id = ?')
+    .bind(refreshed.user_id)
+    .first<{ email: string }>();
+
+  return htmlResponse(
+    dashboardPage(
+      refreshed,
+      recent?.cnt ?? 0,
+      new URL(c.req.url).host,
+      owner?.email,
+      checkoutUrls(c.env)
+    )
+  );
+});
+
+// ── Billing webhooks ──────────────────────────────────────────────────────────
+app.post('/webhooks/lemonsqueezy', async c => {
+  const secret = c.env.LS_WEBHOOK_SECRET;
+  if (!secret) {
+    return c.json({ error: 'Billing is not configured' }, 503);
+  }
+
+  // Signature covers the raw body — read it before parsing.
+  const rawBody = await c.req.text();
+  const signature = c.req.header('X-Signature') ?? '';
+  if (!(await verifyLSSignature(rawBody, signature, secret))) {
+    console.warn('lemonsqueezy webhook rejected: invalid signature');
+    return c.json({ error: 'Invalid signature' }, 401);
+  }
+
+  let payload: LSWebhookPayload;
+  try {
+    payload = JSON.parse(rawBody);
+  } catch {
+    return c.json({ error: 'Invalid JSON body' }, 400);
+  }
+
+  const result = await applyLSEvent(c.env.DB, payload);
+  if (result.status === 'ignored') {
+    console.log(`lemonsqueezy webhook ignored: ${result.event} — ${result.detail}`);
+  }
+  return c.json(result);
 });
 
 // ── Health / ops ──────────────────────────────────────────────────────────────

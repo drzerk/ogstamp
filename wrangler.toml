@@ -15,6 +15,11 @@ bucket_name = "ogstamp-og-cache"
 [vars]
 ENVIRONMENT = "development"
 # Set AUTH_SECRET via `wrangler secret put AUTH_SECRET` for dashboard cookie signing
+#
+# Billing (Lemon Squeezy) — Phase 2 human step, see docs/cfo/2026-07-21-billing-decision.md:
+#   1. wrangler secret put LS_WEBHOOK_SECRET   (from the LS webhook settings)
+#   2. Add here: LS_CHECKOUT_URL_PRO / LS_CHECKOUT_URL_BUSINESS (hosted checkout URLs)
+# Until these exist, upgrade buttons stay hidden and POST /webhooks/lemonsqueezy returns 503.
 
 [env.staging]
 name = "ogstamp-staging"

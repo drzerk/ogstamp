@@ -1,0 +1,55 @@
+name: 'og-check — Open Graph card checker'
+description: 'Catch missing, broken, or badly sized Open Graph and Twitter Card tags in CI, before a bad link ships.'
+author: 'OGStamp'
+
+branding:
+  icon: 'share-2'
+  color: 'orange'
+
+inputs:
+  urls:
+    description: >
+      Page URLs to check, one per line (commas also work). Point these at your
+      preview deployment so a broken card is caught before it merges.
+    required: true
+  fail-on:
+    description: >
+      When to fail the job: "fail" (default — only blocking issues such as a
+      missing or unreachable og:image), "warn" (any finding at all), or "never"
+      (report only).
+    required: false
+    default: 'fail'
+  comment:
+    description: 'Post the report as a sticky pull-request comment. Needs github-token and pull-requests: write.'
+    required: false
+    default: 'true'
+  github-token:
+    description: 'Token used to write the PR comment. Usually ${{ secrets.GITHUB_TOKEN }}.'
+    required: false
+    default: ''
+  api-key:
+    description: >
+      Optional OGStamp API key. When set, generated fix snippets are ready to
+      paste instead of containing a YOUR_KEY placeholder.
+    required: false
+    default: ''
+  ogstamp-url:
+    description: 'OGStamp base URL, for self-hosted deployments.'
+    required: false
+    default: 'https://ogstamp.drzerk88.workers.dev'
+  max-urls:
+    description: 'Safety cap on how many URLs are checked in one run (1–100).'
+    required: false
+    default: '25'
+
+outputs:
+  score:
+    description: 'Average score across all checked pages, 0–100.'
+  failures:
+    description: 'Number of pages with at least one blocking issue.'
+  report:
+    description: 'Full report as JSON, for downstream steps.'
+
+runs:
+  using: 'node20'
+  main: 'index.js'

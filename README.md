@@ -40,12 +40,45 @@ Headers:
 
 ```html
 <meta property="og:image"
-      content="https://ogstamp.drzerk88.workers.dev/og?title=YOUR_TITLE&key=YOUR_KEY" />
+      content="https://ogstamp.drzerk88.workers.dev/og?title=YOUR_TITLE&amp;key=YOUR_KEY" />
 <meta property="og:image:width"  content="1200" />
 <meta property="og:image:height" content="630" />
 <meta name="twitter:card"   content="summary_large_image" />
-<meta name="twitter:image"  content="https://ogstamp.drzerk88.workers.dev/og?title=YOUR_TITLE&key=YOUR_KEY" />
+<meta name="twitter:image"  content="https://ogstamp.drzerk88.workers.dev/og?title=YOUR_TITLE&amp;key=YOUR_KEY" />
 ```
+
+## Try it without a key
+
+The [landing page](https://ogstamp.drzerk88.workers.dev) has a live playground:
+type a title, pick a theme and template, and watch the 1200×630 card render as
+you type. It calls `GET /demo/og`, which needs no key, is always watermarked,
+and is capped and cached — so you can see the output before deciding anything.
+
+## Catch broken cards in CI
+
+A missing or 404-ing `og:image` is invisible in code review and invisible in
+your browser. You find out when someone shares your launch post and it renders
+as a grey rectangle.
+
+`og-check` is a GitHub Action, in [`action/`](action), that reads your pages'
+Open Graph and Twitter Card tags in CI and fails the build when a card is
+broken. When a page has no usable image, the report links a ready-made one.
+
+```yaml
+- uses: drzerk/ogstamp/action@main
+  with:
+    urls: |
+      https://staging.example.com/
+      https://staging.example.com/blog/launch
+    github-token: ${{ secrets.GITHUB_TOKEN }}
+```
+
+It has no dependencies and no build step, runs entirely on your own runner
+against your own URLs, and works fine without an OGStamp account. Full options
+in the [action README](action/README.md).
+
+This repo dogfoods it: [`.github/workflows/og-check.yml`](.github/workflows/og-check.yml)
+checks OGStamp's own pages on every push.
 
 ## Pricing
 

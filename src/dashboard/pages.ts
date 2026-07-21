@@ -1,7 +1,8 @@
 // OGStamp — Dashboard & landing page HTML
 // Aesthetic: "Carbon Terminal" — dark developer tool, amber accent, monospace-first
 
-import type { ApiKey } from '../types';
+import type { ApiKey, CheckoutUrls } from '../types';
+import { checkoutUrl } from '../billing/lemonsqueezy';
 
 const CSS = `
   @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,700;1,400&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,700;1,9..40,400&display=swap');
@@ -117,23 +118,6 @@ const CSS = `
     line-height: 1.65;
   }
   .hero-cta { display: flex; gap: 12px; justify-content: center; }
-
-  /* OG Preview */
-  .og-preview-wrap {
-    position: relative; margin: 72px auto 0; max-width: 720px;
-    border-radius: var(--r-lg); overflow: hidden;
-    box-shadow: 0 0 0 1px var(--border), 0 40px 80px rgba(0,0,0,0.6);
-  }
-  .og-preview-wrap img {
-    width: 100%; display: block;
-    border-radius: var(--r-lg);
-  }
-  .og-preview-label {
-    position: absolute; top: 12px; left: 12px;
-    font-family: var(--font-mono); font-size: 11px; color: var(--text-3);
-    background: var(--surface); border: 1px solid var(--border);
-    padding: 4px 10px; border-radius: var(--r);
-  }
 
   /* Section */
   .section { padding: 80px 0; }
@@ -329,22 +313,186 @@ const CSS = `
     font-family: var(--font-mono);
   }
 
+  /* Playground — live OG compiler */
+  .playground { margin-top: 56px; text-align: left; }
+  .pg-eyebrow {
+    display: flex; align-items: center; gap: 10px; justify-content: center;
+    font-family: var(--font-mono); font-size: 12px; color: var(--text-3);
+    letter-spacing: 0.08em; margin-bottom: 18px;
+  }
+  .pg-eyebrow b { color: var(--accent); font-weight: 500; }
+  .pg-live-dot {
+    width: 7px; height: 7px; border-radius: 50%; background: var(--teal);
+    box-shadow: 0 0 0 0 rgba(20,184,166,0.6);
+    animation: pgpulse 1.8s ease-out infinite;
+  }
+  @keyframes pgpulse {
+    0% { box-shadow: 0 0 0 0 rgba(20,184,166,0.5); }
+    70% { box-shadow: 0 0 0 8px rgba(20,184,166,0); }
+    100% { box-shadow: 0 0 0 0 rgba(20,184,166,0); }
+  }
+  .pg-panel {
+    display: grid; grid-template-columns: 320px 1fr;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--r-lg); overflow: hidden;
+    box-shadow: 0 0 0 1px var(--border), 0 40px 90px rgba(0,0,0,0.55);
+  }
+  .pg-controls { border-right: 1px solid var(--border); background: var(--surface); }
+  .pg-controls-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 16px; border-bottom: 1px solid var(--border);
+  }
+  .pg-controls-head .code-block-dots { display: flex; gap: 6px; }
+  .pg-controls-head span {
+    font-family: var(--font-mono); font-size: 11px; color: var(--text-3); letter-spacing: 0.04em;
+  }
+  .pg-fields { padding: 20px 18px; display: flex; flex-direction: column; gap: 16px; }
+  .pg-field label {
+    display: block; font-family: var(--font-mono); font-size: 10px; color: var(--text-3);
+    letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 7px;
+  }
+  .pg-field input[type=text] {
+    width: 100%; padding: 9px 12px; background: var(--bg);
+    border: 1px solid var(--border); border-radius: var(--r);
+    font-family: var(--font-mono); font-size: 13px; color: var(--text-1);
+    outline: none; transition: border-color 0.15s;
+  }
+  .pg-field input[type=text]:focus { border-color: var(--accent); }
+  .pg-seg {
+    display: flex; gap: 3px; background: var(--bg);
+    border: 1px solid var(--border); border-radius: var(--r); padding: 3px;
+  }
+  .pg-seg button {
+    flex: 1; font-family: var(--font-mono); font-size: 11px; color: var(--text-2);
+    background: transparent; border: none; border-radius: 4px; padding: 7px 4px;
+    cursor: pointer; transition: all 0.15s; text-transform: lowercase;
+  }
+  .pg-seg button:hover { color: var(--text-1); }
+  .pg-seg button.active { background: var(--accent); color: #000; font-weight: 500; }
+  .pg-preview { display: flex; flex-direction: column; background: var(--bg); min-width: 0; }
+  .pg-browser-bar {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+  }
+  .pg-browser-url {
+    flex: 1; font-family: var(--font-mono); font-size: 11px; color: var(--text-3);
+    background: var(--surface); border: 1px solid var(--border); border-radius: 100px;
+    padding: 4px 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .pg-browser-url b { color: var(--text-2); font-weight: 400; }
+  .pg-img-wrap { position: relative; aspect-ratio: 1200 / 630; background: var(--surface); }
+  .pg-img-wrap img { width: 100%; height: 100%; display: block; object-fit: cover; transition: opacity 0.35s ease; }
+  .pg-img-wrap.loading img { opacity: 0.25; }
+  .pg-spinner {
+    position: absolute; top: 50%; left: 50%; width: 26px; height: 26px;
+    margin: -13px 0 0 -13px; border: 2px solid var(--border);
+    border-top-color: var(--accent); border-radius: 50%;
+    opacity: 0; transition: opacity 0.2s; animation: pgspin 0.7s linear infinite;
+  }
+  .pg-img-wrap.loading .pg-spinner { opacity: 1; }
+  @keyframes pgspin { to { transform: rotate(360deg); } }
+  .pg-url {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 14px; border-top: 1px solid var(--border); flex-shrink: 0;
+  }
+  .pg-url code {
+    flex: 1; font-family: var(--font-mono); font-size: 12px; color: var(--accent);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .pg-copy {
+    background: var(--surface); border: 1px solid var(--border); color: var(--text-2);
+    font-family: var(--font-mono); font-size: 11px; padding: 6px 13px;
+    border-radius: var(--r); cursor: pointer; transition: all 0.15s; white-space: nowrap;
+  }
+  .pg-copy:hover { border-color: var(--accent); color: var(--accent); }
+  .pg-cta {
+    text-align: center; margin-top: 22px; font-size: 14px; color: var(--text-2);
+    font-family: var(--font-sans);
+  }
+  .pg-cta a { font-weight: 500; }
+  .pg-cta .pg-wm { color: var(--text-3); font-family: var(--font-mono); font-size: 12px; }
+
   @media (max-width: 768px) {
     .pricing-grid { grid-template-columns: 1fr; }
     .features-grid { grid-template-columns: 1fr; }
     .dash-grid { grid-template-columns: 1fr; }
     .hero h1 { font-size: 36px; }
+    .pg-panel { grid-template-columns: 1fr; }
+    .pg-controls { border-right: none; border-bottom: 1px solid var(--border); }
   }
 `;
 
-function layout(title: string, body: string, extraHead = ''): string {
+// Canonical public origin, used when a page has no request host to work from.
+const DEFAULT_HOST = 'ogstamp.drzerk88.workers.dev';
+const DEFAULT_DESCRIPTION =
+  'Generate Open Graph images via API. Hosted on the Cloudflare edge, cached globally, delivered in milliseconds.';
+
+export interface PageMeta {
+  description?: string;
+  host?: string;
+  path?: string;
+  /** Params for the share card this page advertises, rendered by our own API. */
+  card?: { title: string; description?: string; domain?: string; tag?: string };
+  noindex?: boolean;
+}
+
+function escapeAttr(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+/**
+ * Full Open Graph + Twitter Card block. We sell OG images, so our own share
+ * card is generated by our own public endpoint — the keyless `/demo/og` route,
+ * whose watermark is simply our logo on our own site.
+ */
+function socialTags(pageTitle: string, meta: PageMeta): string {
+  const host = meta.host || DEFAULT_HOST;
+  const origin = `https://${host}`;
+  const canonical = origin + (meta.path ?? '/');
+  const description = meta.description ?? DEFAULT_DESCRIPTION;
+  const card = meta.card ?? { title: pageTitle };
+
+  const params = new URLSearchParams();
+  params.set('title', card.title);
+  if (card.description) params.set('description', card.description);
+  params.set('domain', card.domain ?? host);
+  if (card.tag) params.set('tag', card.tag);
+  params.set('theme', 'dark');
+  const image = `${origin}/demo/og?${params.toString()}`;
+
+  const title = `${pageTitle} — OGStamp`;
+
+  return `
+  <link rel="canonical" href="${escapeAttr(canonical)}" />
+  <meta name="description" content="${escapeAttr(description)}" />${
+    meta.noindex ? '\n  <meta name="robots" content="noindex" />' : ''
+  }
+  <meta property="og:title" content="${escapeAttr(title)}" />
+  <meta property="og:description" content="${escapeAttr(description)}" />
+  <meta property="og:image" content="${escapeAttr(image)}" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="${escapeAttr(card.title)}" />
+  <meta property="og:url" content="${escapeAttr(canonical)}" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="OGStamp" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="${escapeAttr(title)}" />
+  <meta name="twitter:description" content="${escapeAttr(description)}" />
+  <meta name="twitter:image" content="${escapeAttr(image)}" />`;
+}
+
+function layout(title: string, body: string, meta: PageMeta = {}, extraHead = ''): string {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>${title} — OGStamp</title>
-  <meta name="description" content="Generate stunning Open Graph images via API. Hosted on Cloudflare edge, cached globally, delivered in milliseconds." />
+  <title>${title} — OGStamp</title>${socialTags(title, meta)}
   <style>${CSS}</style>
   ${extraHead}
 </head>
@@ -357,7 +505,7 @@ function layout(title: string, body: string, extraHead = ''): string {
 function nav(_activePath = '/'): string {
   return `
   <nav class="nav">
-    <a class="nav-logo" href="/">Snap<span>OG</span></a>
+    <a class="nav-logo" href="/"><span>OG</span>Stamp</a>
     <div class="nav-links">
       <a href="/#how-it-works">Docs</a>
       <a href="/#pricing">Pricing</a>
@@ -375,7 +523,7 @@ function footer(): string {
   </footer>`;
 }
 
-export function landingPage(host: string): string {
+export function landingPage(host: string, checkout: CheckoutUrls = {}): string {
   void host; // used in template strings below
 
   const body = `
@@ -395,14 +543,75 @@ export function landingPage(host: string): string {
         <a href="/#how-it-works" class="btn btn-ghost" style="font-size:15px;padding:12px 28px;">View Docs</a>
       </div>
 
-      <!-- Live OG preview -->
-      <div class="og-preview-wrap" style="margin-top:56px;">
-        <div class="og-preview-label">1200 × 630 PNG — rendered live</div>
-        <img
-          src="/og?title=How%20to%20Build%20a%20Billion-Dollar%20API&description=A%20deep%20dive%20into%20developer%20tools%20that%20compound%20%E2%80%94%20and%20the%20pricing%20that%20makes%20them%20survive&domain=myblog.dev&theme=dark&template=default"
-          alt="Live OG image example"
-          style="width:100%;border-radius:8px;"
-        />
+      <!-- Interactive playground -->
+      <div class="playground" id="playground">
+        <div class="pg-eyebrow">
+          <span class="pg-live-dot"></span>
+          <span>Type anything — the social card <b>renders live</b>, no signup</span>
+        </div>
+        <div class="pg-panel">
+          <div class="pg-controls">
+            <div class="pg-controls-head">
+              <div class="code-block-dots">
+                <div class="dot dot-red"></div><div class="dot dot-yellow"></div><div class="dot dot-green"></div>
+              </div>
+              <span>og-image.config</span>
+            </div>
+            <div class="pg-fields">
+              <div class="pg-field">
+                <label for="pg-title">Title</label>
+                <input type="text" id="pg-title" data-pg="title" maxlength="100"
+                  value="How to Build a Billion-Dollar API" placeholder="Your page title" />
+              </div>
+              <div class="pg-field">
+                <label for="pg-desc">Description</label>
+                <input type="text" id="pg-desc" data-pg="description" maxlength="200"
+                  value="A deep dive into developer tools that compound" placeholder="Optional subtitle" />
+              </div>
+              <div class="pg-field">
+                <label for="pg-domain">Domain</label>
+                <input type="text" id="pg-domain" data-pg="domain" maxlength="100"
+                  value="myblog.dev" placeholder="yoursite.com" />
+              </div>
+              <div class="pg-field">
+                <label>Theme</label>
+                <div class="pg-seg" data-seg-for="theme">
+                  <button type="button" data-val="dark" class="active">dark</button>
+                  <button type="button" data-val="light">light</button>
+                </div>
+              </div>
+              <div class="pg-field">
+                <label>Template</label>
+                <div class="pg-seg" data-seg-for="template">
+                  <button type="button" data-val="default" class="active">default</button>
+                  <button type="button" data-val="blog">blog</button>
+                  <button type="button" data-val="article">article</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="pg-preview">
+            <div class="pg-browser-bar">
+              <div class="code-block-dots">
+                <div class="dot dot-red"></div><div class="dot dot-yellow"></div><div class="dot dot-green"></div>
+              </div>
+              <div class="pg-browser-url"><b>https://</b><span id="pg-bar-url">myblog.dev</span></div>
+            </div>
+            <div class="pg-img-wrap" id="pg-img-wrap">
+              <img id="pg-img" alt="Live OG image preview"
+                src="/demo/og?title=How%20to%20Build%20a%20Billion-Dollar%20API&amp;description=A%20deep%20dive%20into%20developer%20tools%20that%20compound&amp;domain=myblog.dev&amp;theme=dark&amp;template=default" />
+              <div class="pg-spinner"></div>
+            </div>
+            <div class="pg-url">
+              <code id="pg-real-url">GET /og?title=How+to+Build+a+Billion-Dollar+API&amp;key=YOUR_KEY</code>
+              <button class="pg-copy" id="pg-copy">Copy URL</button>
+            </div>
+          </div>
+        </div>
+        <p class="pg-cta">
+          <span class="pg-wm">↑ live preview carries a watermark.</span>
+          <a href="/register">Get a free key</a> to drop it — 100 images/month, no card.
+        </p>
       </div>
     </div>
   </section>
@@ -543,7 +752,11 @@ export function landingPage(host: string): string {
             <li>Priority support</li>
           </ul>
           <div class="pricing-cta">
-            <a href="/register?tier=pro" class="btn btn-primary" style="width:100%;">Start Pro →</a>
+            ${
+              checkout.pro
+                ? `<a href="${checkout.pro}" class="btn btn-primary" style="width:100%;">Start Pro →</a>`
+                : `<a href="/register?tier=pro" class="btn btn-primary" style="width:100%;">Start Pro →</a>`
+            }
           </div>
         </div>
 
@@ -560,7 +773,11 @@ export function landingPage(host: string): string {
             <li>SLA + priority queue</li>
           </ul>
           <div class="pricing-cta">
-            <a href="mailto:drzerk88@googlemail.com" class="btn btn-ghost" style="width:100%;">Contact us →</a>
+            ${
+              checkout.business
+                ? `<a href="${checkout.business}" class="btn btn-ghost" style="width:100%;">Start Business →</a>`
+                : `<a href="mailto:drzerk88@googlemail.com" class="btn btn-ghost" style="width:100%;">Contact us →</a>`
+            }
           </div>
         </div>
 
@@ -580,12 +797,104 @@ export function landingPage(host: string): string {
         setTimeout(() => { btn.textContent = orig; }, 1500);
       });
     });
+
+    // Interactive playground — live demo render
+    (function () {
+      var img = document.getElementById('pg-img');
+      var wrap = document.getElementById('pg-img-wrap');
+      var realUrl = document.getElementById('pg-real-url');
+      var barUrl = document.getElementById('pg-bar-url');
+      var copyBtn = document.getElementById('pg-copy');
+      if (!img || !wrap) return;
+
+      var state = {
+        title: 'How to Build a Billion-Dollar API',
+        description: 'A deep dive into developer tools that compound',
+        domain: 'myblog.dev',
+        theme: 'dark',
+        template: 'default'
+      };
+
+      function demoUrl() {
+        var p = new URLSearchParams();
+        p.set('title', state.title || 'Your Page Title Here');
+        if (state.description) p.set('description', state.description);
+        if (state.domain) p.set('domain', state.domain);
+        p.set('theme', state.theme);
+        p.set('template', state.template);
+        return '/demo/og?' + p.toString();
+      }
+
+      function realQs() {
+        var p = new URLSearchParams();
+        p.set('title', state.title || 'Your Page Title Here');
+        if (state.description) p.set('description', state.description);
+        if (state.domain) p.set('domain', state.domain);
+        if (state.theme === 'light') p.set('theme', 'light');
+        if (state.template !== 'default') p.set('template', state.template);
+        p.set('key', 'YOUR_KEY');
+        return p.toString();
+      }
+
+      var timer;
+      function schedule() {
+        clearTimeout(timer);
+        timer = setTimeout(function () {
+          wrap.classList.add('loading');
+          img.src = demoUrl();
+          if (realUrl) realUrl.textContent = 'GET /og?' + realQs();
+          if (barUrl) barUrl.textContent = state.domain || 'yoursite.com';
+        }, 350);
+      }
+
+      img.addEventListener('load', function () { wrap.classList.remove('loading'); });
+      img.addEventListener('error', function () { wrap.classList.remove('loading'); });
+
+      document.querySelectorAll('[data-pg]').forEach(function (el) {
+        el.addEventListener('input', function () {
+          state[el.getAttribute('data-pg')] = el.value;
+          schedule();
+        });
+      });
+
+      document.querySelectorAll('.pg-seg').forEach(function (seg) {
+        seg.addEventListener('click', function (e) {
+          var b = e.target.closest('button');
+          if (!b) return;
+          seg.querySelectorAll('button').forEach(function (x) { x.classList.remove('active'); });
+          b.classList.add('active');
+          state[seg.getAttribute('data-seg-for')] = b.getAttribute('data-val');
+          schedule();
+        });
+      });
+
+      if (copyBtn) {
+        copyBtn.addEventListener('click', function () {
+          navigator.clipboard.writeText(location.origin + '/og?' + realQs());
+          var o = copyBtn.textContent;
+          copyBtn.textContent = 'Copied!';
+          setTimeout(function () { copyBtn.textContent = o; }, 1500);
+        });
+      }
+
+      // Keep the SSR'd query-string line in sync without forcing an image reload.
+      if (realUrl) realUrl.textContent = 'GET /og?' + realQs();
+    })();
   </script>`;
 
-  return layout('Generate OG images at the edge', body);
+  return layout('Generate OG images at the edge', body, {
+    host,
+    path: '/',
+    card: {
+      title: 'OG images for every URL, delivered at the edge',
+      description: 'One API call. Instant PNG. Cached globally on Cloudflare.',
+      domain: host,
+      tag: 'API',
+    },
+  });
 }
 
-export function registerPage(error?: string, tier?: string): string {
+export function registerPage(error?: string, tier?: string, billingLive = false): string {
   const body = `
   ${nav()}
   <section class="section">
@@ -595,7 +904,13 @@ export function registerPage(error?: string, tier?: string): string {
       <p class="section-sub" style="margin-bottom:32px;">Enter your email to receive your API key instantly. No password. No credit card for free tier.</p>
 
       ${error ? `<div class="alert alert-error">${error}</div>` : ''}
-      ${tier && tier !== 'free' ? `<div class="card" style="margin-bottom:16px;padding:14px 16px;font-size:13px;color:var(--text-2);">⚡ Pro &amp; Business checkout launches soon — every new key currently starts on the <strong>Free</strong> tier (100 images/month).</div>` : ''}
+      ${
+        tier && tier !== 'free'
+          ? billingLive
+            ? `<div class="card" style="margin-bottom:16px;padding:14px 16px;font-size:13px;color:var(--text-2);">⚡ Every new key starts on the <strong>Free</strong> tier — upgrade to Pro from your dashboard right after signup.</div>`
+            : `<div class="card" style="margin-bottom:16px;padding:14px 16px;font-size:13px;color:var(--text-2);">⚡ Pro &amp; Business checkout launches soon — every new key currently starts on the <strong>Free</strong> tier (100 images/month).</div>`
+          : ''
+      }
 
       <div class="card">
         <form method="POST" action="/register">
@@ -623,7 +938,11 @@ export function registerPage(error?: string, tier?: string): string {
   </section>
   ${footer()}`;
 
-  return layout('Get API Key', body);
+  return layout('Get API Key', body, {
+    path: '/register',
+    description: 'Create a free OGStamp API key — 100 images a month, no credit card.',
+    card: { title: 'Get a free OGStamp API key', description: '100 images a month, no credit card' },
+  });
 }
 
 export function keyCreatedPage(rawKey: string, email: string, tier: string, host: string): string {
@@ -683,10 +1002,16 @@ export function keyCreatedPage(rawKey: string, email: string, tier: string, host
     });
   </script>`;
 
-  return layout('API Key Created', body);
+  return layout('API Key Created', body, { host, path: '/register', noindex: true });
 }
 
-export function dashboardPage(key: ApiKey, recentCount: number, host: string): string {
+export function dashboardPage(
+  key: ApiKey,
+  recentCount: number,
+  host: string,
+  ownerEmail?: string,
+  checkout: CheckoutUrls = {}
+): string {
   const pct = Math.round((key.usage_count / key.monthly_limit) * 100);
   const barClass = pct >= 100 ? 'full' : pct >= 80 ? 'warn' : '';
   const resetDate = new Date(key.usage_reset_at);
@@ -722,7 +1047,18 @@ export function dashboardPage(key: ApiKey, recentCount: number, host: string): s
             key.tier === 'free'
               ? `<div style="margin-top:20px;padding-top:20px;border-top:1px solid var(--border);">
                    <p style="font-size:13px;color:var(--text-2);">Need more?</p>
-                   <a href="/register?tier=pro" class="btn btn-primary" style="margin-top:10px;">Upgrade to Pro — $19/mo →</a>
+                   <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;">
+                   ${
+                     checkout.pro
+                       ? `<a href="${checkoutUrl(checkout.pro, { userId: key.user_id, email: ownerEmail })}" class="btn btn-primary">Upgrade to Pro — $19/mo →</a>`
+                       : `<a href="/register?tier=pro" class="btn btn-primary">Upgrade to Pro — $19/mo →</a>`
+                   }
+                   ${
+                     checkout.business
+                       ? `<a href="${checkoutUrl(checkout.business, { userId: key.user_id, email: ownerEmail })}" class="btn btn-ghost">Business — $49/mo →</a>`
+                       : ''
+                   }
+                   </div>
                  </div>`
               : ''
           }
@@ -772,7 +1108,7 @@ export function dashboardPage(key: ApiKey, recentCount: number, host: string): s
   </div>
   ${footer()}`;
 
-  return layout('Dashboard', body);
+  return layout('Dashboard', body, { host, path: '/dashboard', noindex: true });
 }
 
 export function errorPage(code: number, message: string): string {
@@ -788,5 +1124,5 @@ export function errorPage(code: number, message: string): string {
   </section>
   ${footer()}`;
 
-  return layout(`${code} Error`, body);
+  return layout(`${code} Error`, body, { noindex: true });
 }

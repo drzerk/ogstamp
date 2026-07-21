@@ -36,4 +36,14 @@ export interface Env {
   OG_CACHE: R2Bucket;
   ENVIRONMENT: string;
   AUTH_SECRET?: string;
+  // Billing (all optional — upgrade UI and webhook stay dormant until set)
+  LS_WEBHOOK_SECRET?: string;
+  LS_CHECKOUT_URL_PRO?: string;
+  LS_CHECKOUT_URL_BUSINESS?: string;
+}
+
+// Hosted checkout URLs, present only once billing is configured
+export interface CheckoutUrls {
+  pro?: string;
+  business?: string;
 }
