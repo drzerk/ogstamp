@@ -38,3 +38,19 @@ jobs:
             https://ogstamp.drzerk88.workers.dev/register
           fail-on: fail
           github-token: ${{ secrets.GITHUB_TOKEN }}
+
+  published:
+    # The job above tests the working tree. This one tests what a stranger
+    # actually gets from `uses: drzerk/ogstamp/action@v1` — a released tag that
+    # does not resolve, or resolves to a broken tree, is the difference between
+    # a published action and a directory nobody can run.
+    name: released v1 tag resolves and runs
+    runs-on: ubuntu-latest
+    needs: unit
+    steps:
+      - name: Run the action as a consumer would
+        uses: drzerk/ogstamp/action@v1
+        with:
+          urls: https://ogstamp.drzerk88.workers.dev/
+          fail-on: fail
+          comment: 'false'

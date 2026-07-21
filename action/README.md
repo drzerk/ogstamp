@@ -11,7 +11,7 @@ tags, and fails the build when a card is broken. When a page has no usable
 image, the report includes a ready-made one.
 
 ```yaml
-- uses: drzerk/ogstamp/action@main
+- uses: drzerk/ogstamp/action@v1
   with:
     urls: |
       https://staging.example.com/
@@ -51,7 +51,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check social cards on the preview deployment
-        uses: drzerk/ogstamp/action@main
+        uses: drzerk/ogstamp/action@v1
         id: og
         with:
           urls: ${{ steps.deploy.outputs.preview-url }}
@@ -106,6 +106,14 @@ That URL is [OGStamp](https://ogstamp.drzerk88.workers.dev), which renders a
 - Pages are fetched with a 15 s timeout and read up to 1 MB — enough for any
   `<head>`, bounded for a hung server.
 - The PR comment is sticky: one comment, updated in place.
+
+## Versioning
+
+`@v1` is a moving tag that tracks the newest v1.x release, so bug fixes reach
+you without a bump. Pin `@v1.0.0` — or the full commit SHA, if your policy is
+to pin actions by digest — when you want it frozen.
+
+Releases: <https://github.com/drzerk/ogstamp/releases>
 
 ## Development
 

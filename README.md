@@ -65,7 +65,7 @@ Open Graph and Twitter Card tags in CI and fails the build when a card is
 broken. When a page has no usable image, the report links a ready-made one.
 
 ```yaml
-- uses: drzerk/ogstamp/action@main
+- uses: drzerk/ogstamp/action@v1
   with:
     urls: |
       https://staging.example.com/
