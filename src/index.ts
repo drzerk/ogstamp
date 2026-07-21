@@ -1,4 +1,4 @@
-// SnapOG — Main Cloudflare Worker
+// OGStamp — Main Cloudflare Worker
 // Routes: GET /og (image gen), GET / (landing), GET/POST /register, GET /dashboard
 
 import { Hono } from 'hono';
@@ -164,7 +164,7 @@ app.get('/og', async c => {
         'Content-Type': 'image/png',
         'Cache-Control': 'public, max-age=86400, s-maxage=604800',
         'X-Cache': 'HIT',
-        'X-SnapOG-Tier': apiKey.tier,
+        'X-OGStamp-Tier': apiKey.tier,
       },
     });
   }
@@ -191,7 +191,7 @@ app.get('/og', async c => {
       'Content-Type': 'image/png',
       'Cache-Control': 'public, max-age=86400, s-maxage=604800',
       'X-Cache': 'MISS',
-      'X-SnapOG-Tier': apiKey.tier,
+      'X-OGStamp-Tier': apiKey.tier,
     },
   });
 });
@@ -255,7 +255,7 @@ app.post('/register', async c => {
     .bind(keyId, user.id, keyname, keyPrefix, keyHash, safeTier, monthlyLimit, resetAt)
     .run();
 
-  return htmlResponse(keyCreatedPage(rawKey, email, safeTier));
+  return htmlResponse(keyCreatedPage(rawKey, email, safeTier, new URL(c.req.url).host));
 });
 
 // ── Dashboard ─────────────────────────────────────────────────────────────────
@@ -281,7 +281,7 @@ app.get('/dashboard', async c => {
     .bind(refreshed.id, yesterday)
     .first<{ cnt: number }>();
 
-  return htmlResponse(dashboardPage(refreshed, recent?.cnt ?? 0));
+  return htmlResponse(dashboardPage(refreshed, recent?.cnt ?? 0, new URL(c.req.url).host));
 });
 
 // ── Health / ops ──────────────────────────────────────────────────────────────

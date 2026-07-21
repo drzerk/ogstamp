@@ -1,4 +1,4 @@
-// SnapOG — OG image renderer
+// OGStamp — OG image renderer
 // Uses workers-og (Satori + resvg-wasm, CF Workers compatible)
 
 import { ImageResponse } from 'workers-og';

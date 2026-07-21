@@ -1,4 +1,4 @@
-// SnapOG — shared types
+// OGStamp — shared types
 
 export type Tier = 'free' | 'pro' | 'business';
 

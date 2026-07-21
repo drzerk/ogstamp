@@ -1,4 +1,4 @@
-// SnapOG — OG image element templates
+// OGStamp — OG image element templates
 // Returns plain objects compatible with workers-og / satori
 
 import type { OGParams } from '../types';
@@ -123,7 +123,7 @@ function Footer(
                   opacity: '0.55',
                   letterSpacing: '0.06em',
                 },
-                children: 'snapog.dev',
+                children: 'OGStamp',
               },
             }
           : { type: 'div', props: { style: { width: '1px' }, children: null } },
@@ -450,7 +450,7 @@ function articleTemplate(params: OGParams, watermark: boolean): VNode {
                         opacity: '0.5',
                         letterSpacing: '0.06em',
                       },
-                      children: 'snapog.dev',
+                      children: 'OGStamp',
                     },
                   }
                 : { type: 'div', props: { style: { width: '1px' }, children: null } },

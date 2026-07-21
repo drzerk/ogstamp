@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# SnapOG — quick API test (requires a running dev server)
+# OGStamp — quick API test (requires a running dev server)
 set -euo pipefail
 
 BASE_URL="${BASE_URL:-http://127.0.0.1:8787}"
 KEY="${API_KEY:-}"
 
-echo "=== SnapOG API smoke test ==="
+echo "=== OGStamp API smoke test ==="
 echo "Base URL: $BASE_URL"
 echo ""
 
@@ -17,7 +17,7 @@ echo ""
 # Test 2: OG image (requires key)
 if [ -n "$KEY" ]; then
   echo "[2] GET /og?title=Hello+World&key=$KEY"
-  OUT=$(mktemp /tmp/snapog-test-XXXX.png)
+  OUT=$(mktemp /tmp/ogstamp-test-XXXX.png)
   HTTP_CODE=$(curl -sf -o "$OUT" -w "%{http_code}" \
     "$BASE_URL/og?title=Hello+World&description=Test+description&domain=test.com&key=$KEY")
   echo "  HTTP $HTTP_CODE — saved to $OUT"

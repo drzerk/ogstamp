@@ -1,4 +1,4 @@
--- SnapOG D1 Schema
+-- OGStamp D1 Schema
 -- Migration 0001: initial tables
 
 CREATE TABLE IF NOT EXISTS users (

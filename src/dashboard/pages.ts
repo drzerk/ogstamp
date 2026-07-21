@@ -1,4 +1,4 @@
-// SnapOG — Dashboard & landing page HTML
+// OGStamp — Dashboard & landing page HTML
 // Aesthetic: "Carbon Terminal" — dark developer tool, amber accent, monospace-first
 
 import type { ApiKey } from '../types';
@@ -343,7 +343,7 @@ function layout(title: string, body: string, extraHead = ''): string {
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>${title} — SnapOG</title>
+  <title>${title} — OGStamp</title>
   <meta name="description" content="Generate stunning Open Graph images via API. Hosted on Cloudflare edge, cached globally, delivered in milliseconds." />
   <style>${CSS}</style>
   ${extraHead}
@@ -370,7 +370,7 @@ function footer(): string {
   return `
   <footer class="footer">
     <div class="container">
-      snapog.dev — OG images at the edge. Built with ♥ on Cloudflare Workers.
+      OGStamp — OG images at the edge. Built with ♥ on Cloudflare Workers.
     </div>
   </footer>`;
 }
@@ -388,7 +388,7 @@ export function landingPage(host: string): string {
       <h1>OG images for every URL,<br/><em>delivered at the edge</em></h1>
       <p class="hero-sub">
         One API call. Instant PNG. Cached globally on Cloudflare CDN.
-        Stop hand-coding OG templates — let SnapOG generate them dynamically.
+        Stop hand-coding OG templates — let OGStamp generate them dynamically.
       </p>
       <div class="hero-cta">
         <a href="/register" class="btn btn-primary" style="font-size:15px;padding:12px 28px;">Get Free API Key</a>
@@ -479,7 +479,7 @@ export function landingPage(host: string): string {
   <!-- Features -->
   <section class="section" style="padding-top:0;">
     <div class="container">
-      <p class="section-title">Why SnapOG</p>
+      <p class="section-title">Why OGStamp</p>
       <h2 class="section-h2">Built for production, priced for teams</h2>
       <div class="features-grid">
         <div class="feature-card">
@@ -522,7 +522,7 @@ export function landingPage(host: string): string {
             <li>3 templates (dark + light)</li>
             <li>R2 global cache</li>
             <li>API key + dashboard</li>
-            <li class="dim">SnapOG watermark</li>
+            <li class="dim">OGStamp watermark</li>
             <li class="dim">No custom fonts</li>
           </ul>
           <div class="pricing-cta">
@@ -560,7 +560,7 @@ export function landingPage(host: string): string {
             <li>SLA + priority queue</li>
           </ul>
           <div class="pricing-cta">
-            <a href="mailto:hello@snapog.dev" class="btn btn-ghost" style="width:100%;">Contact us →</a>
+            <a href="mailto:drzerk88@googlemail.com" class="btn btn-ghost" style="width:100%;">Contact us →</a>
           </div>
         </div>
 
@@ -626,7 +626,7 @@ export function registerPage(error?: string, tier?: string): string {
   return layout('Get API Key', body);
 }
 
-export function keyCreatedPage(rawKey: string, email: string, tier: string): string {
+export function keyCreatedPage(rawKey: string, email: string, tier: string, host: string): string {
   const body = `
   ${nav()}
   <section class="section">
@@ -661,7 +661,7 @@ export function keyCreatedPage(rawKey: string, email: string, tier: string): str
           <span class="code-block-lang">Quick start</span>
         </div>
         <pre><span class="c-comment"># Test your key</span>
-<span class="c-key">curl</span> <span class="c-str">"https://snapog.dev/og?title=Hello+World&amp;key=${rawKey}"</span> \
+<span class="c-key">curl</span> <span class="c-str">"https://${host}/og?title=Hello+World&amp;key=${rawKey}"</span> \
   <span class="c-val">--output</span> og.png && <span class="c-key">open</span> og.png</pre>
       </div>
 
@@ -686,7 +686,7 @@ export function keyCreatedPage(rawKey: string, email: string, tier: string): str
   return layout('API Key Created', body);
 }
 
-export function dashboardPage(key: ApiKey, recentCount: number): string {
+export function dashboardPage(key: ApiKey, recentCount: number, host: string): string {
   const pct = Math.round((key.usage_count / key.monthly_limit) * 100);
   const barClass = pct >= 100 ? 'full' : pct >= 80 ? 'warn' : '';
   const resetDate = new Date(key.usage_reset_at);
@@ -753,7 +753,7 @@ export function dashboardPage(key: ApiKey, recentCount: number): string {
               <span class="code-block-lang">HTML / meta tags</span>
             </div>
             <pre><span class="c-key">&lt;meta</span> <span class="c-val">property=</span><span class="c-str">"og:image"</span>
-      <span class="c-val">content=</span><span class="c-str">"https://snapog.dev/og?title=YOUR_TITLE&amp;key=${key.key_prefix}..."</span> <span class="c-key">/&gt;</span></pre>
+      <span class="c-val">content=</span><span class="c-str">"https://${host}/og?title=YOUR_TITLE&amp;key=${key.key_prefix}..."</span> <span class="c-key">/&gt;</span></pre>
           </div>
           <div class="code-block" style="margin-top:12px;">
             <div class="code-block-header">
@@ -762,7 +762,7 @@ export function dashboardPage(key: ApiKey, recentCount: number): string {
               </div>
               <span class="code-block-lang">cURL test</span>
             </div>
-            <pre><span class="c-key">curl</span> <span class="c-str">"https://snapog.dev/og?title=My+Blog+Post&amp;domain=myblog.com&amp;key=${key.key_prefix}..."</span> \
+            <pre><span class="c-key">curl</span> <span class="c-str">"https://${host}/og?title=My+Blog+Post&amp;domain=myblog.com&amp;key=${key.key_prefix}..."</span> \
   <span class="c-val">--output</span> og.png && <span class="c-key">open</span> og.png</pre>
           </div>
         </div>
